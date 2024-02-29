@@ -29,20 +29,14 @@ const checkoutSuccessPage = fs.readFileSync(
 
 
 router.post("/create-checkout-session", async (req, res) => {
-  try {
-    const customer = await stripe.customers.create({
-      metadata: {
-        userId: req.body.userId,
-        cart: JSON.stringify(req.body.cartItems),
-      },
-    });
-    
-  } catch (error) {
-    console.log(error);
-    res.status(500).send("Internal server error");
-  }
+  const customer = await stripe.customers.create({
+    metadata: {
+      userId: req.body.userId,
+      cart: JSON.stringify(req.body.cartItems),
+    },
+  });
 
-
+ 
   const line_items = req.body.cartItems.map((item) => {
     return {
       price_data: {
@@ -70,8 +64,8 @@ router.post("/create-checkout-session", async (req, res) => {
     line_items,
     mode: "payment",
     customer: customer.id,
-    success_url: "https://stripeserver-production-962c.up.railway.app/stripe/checkout-success",
-    cancel_url:  "https://stripeserver-production-962c.up.railway.app/stripe/cancel",
+    success_url: "https://stripeserver-production-962c.up.railway.app/checkout-success",
+    cancel_url:  "https://stripeserver-production-962c.up.railway.app/cancel",
   });
 
   // res.redirect(303, session.url);
