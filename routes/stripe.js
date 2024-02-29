@@ -28,50 +28,57 @@ const checkoutSuccessPage = fs.readFileSync(
   });
 
 
-router.post("/create-checkout-session", async (req, res) => {
-  const customer = await stripe.customers.create({
-    metadata: {
-      userId: req.body.userId,
-      cart: JSON.stringify(req.body.cartItems),
-    },
-  });
-
- 
-  const line_items = req.body.cartItems.map((item) => {
-    return {
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.name,
-          imageUrl: item.image,
-          description: item.desc,
-          metadata: {
-            id: item.id,
-          },
+  router.post("/create-checkout-session", async (req, res) => {
+    if (!req.body.cartItems || !Array.isArray(req.body.cartItems)) {
+      // Si cartItems n'existe pas ou n'est pas un tableau, renvoyez une erreur
+      return res.status(400).send("cartItems is required and must be an array.");
+    }
+  
+    try {
+      const customer = await stripe.customers.create({
+        metadata: {
+          userId: req.body.userId,
+          cart: JSON.stringify(req.body.cartItems),
         },
-        unit_amount: item.price * 100,
-      },
-      quantity: item.cartQuantity,
-    };
+      });
+  
+      const line_items = req.body.cartItems.map((item) => {
+        return {
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: item.name,
+              images: [item.imageUrl], // images doit être un tableau
+              // description: item.desc, // description n'est pas supportée ici
+              metadata: {
+                id: item.id,
+              },
+            },
+            unit_amount: item.price * 100,
+          },
+          quantity: item.cartQuantity,
+        };
+      });
+  
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        phone_number_collection: {
+          enabled: false,
+        },
+        line_items,
+        mode: "payment",
+        customer: customer.id,
+        success_url: "https://stripeserver-production-962c.up.railway.app/stripe/checkout-success",
+        cancel_url: "https://stripeserver-production-962c.up.railway.app/stripe/cancel",
+      });
+  
+      res.send({ url: session.url });
+    } catch (error) {
+      console.log(error);
+      res.status(500).send("Internal server error");
+    }
   });
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-   
-    
-    phone_number_collection: {
-      enabled: false,
-    },
-    line_items,
-    mode: "payment",
-    customer: customer.id,
-    success_url: "https://stripeserver-production-962c.up.railway.app/checkout-success",
-    cancel_url:  "https://stripeserver-production-962c.up.railway.app/cancel",
-  });
-
-  // res.redirect(303, session.url);
-  res.send({ url: session.url });
-});
-
+  
 // Create order function
 
 const createOrder = async (customer, data) => {
