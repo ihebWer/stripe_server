@@ -29,14 +29,20 @@ const checkoutSuccessPage = fs.readFileSync(
 
 
 router.post("/create-checkout-session", async (req, res) => {
-  const customer = await stripe.customers.create({
-    metadata: {
-      userId: req.body.userId,
-      cart: JSON.stringify(req.body.cartItems),
-    },
-  });
+  try {
+    const customer = await stripe.customers.create({
+      metadata: {
+        userId: req.body.userId,
+        cart: JSON.stringify(req.body.cartItems),
+      },
+    });
+    
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal server error");
+  }
 
- 
+
   const line_items = req.body.cartItems.map((item) => {
     return {
       price_data: {
